@@ -18,7 +18,7 @@ MongoClient.connect('mongodb+srv://cocorugo:bbkBoo1camp@cluster0-06yeb.mongodb.n
 });
 let posicion = 0;
 let urls = [];
-let array = [];
+let direccionesOng = [];
 let urlPagina = 'https://www.hacesfalta.org';
 
 
@@ -27,7 +27,7 @@ robarURLS(1);
 function robarURLS(index) {
   axios.get(`https://www.hacesfalta.org/oportunidades/presencial/buscador/listado/Default.aspx?pageIndex=${index}`)
     .then((response) => {
-
+      //Antes que nada necesitamos todas las urls de cada página de búsqueda que nos llevarán a cada oferta de voluntariado
       const $ = cheerio.load(response.data);
       const URLcontenedor = $('div.resultado-busqueda div.row div.col-sm-4');
       for (let h = 0; h < URLcontenedor.length; h++) {
@@ -45,7 +45,7 @@ function robarURLS(index) {
       index++;
       if (index < maxPageIndex) {
         setTimeout(function () {
-          console.log('descarganado pagina' + index)
+          console.log('descargando pagina' + index)
           robarURLS(index);
         }, 1000);
       } else {
@@ -64,6 +64,7 @@ function robarDatos(posicion) {
   console.log(`obteniendo datos de página en posicion ${posicion} de ${urls.length}`);
   axios.get(`${urlPagina + urls[posicion]}`)
     .then((response) => {
+      //Primero rascamos el título de la oferta de voluntariado
       const datosVoluntariado = [];
       const $ = cheerio.load(response.data)
       const elementoTitulo = $('div.col-xs-12')
@@ -78,6 +79,25 @@ function robarDatos(posicion) {
           console.log(urlText);
         }
       }
+      //Ahora cogeremos el nombre de la ONG, que se encuentran en la tabla, pero en una posición diferente al conjunto que rascaremos más tarde
+      const tabla = $('table.table');
+      const fila = $(tabla).find("tr")[4];
+      let interior = $(fila).find("td div.clear");
+      let ong = $(interior.find("a"))[1];
+      if (ong) {
+        const ongText = $(ong).text().trim();
+        datosVoluntariado.push(ongText);
+      };
+      //Necesitamos la dirección de la ficha de cada ONG para obtener una URL  a su web oficial
+      
+      let interior2 = $(fila).find("td div.clear");
+      let ongUrl = $(interior.find("a"))[1];
+      if (ongUrl) {
+        const ongText2 = $(ongUrl).attr('href');
+        direccionesOng.push(ongText2);
+      };
+      
+      //Algo parecido con la fecha inicio, está en la columna 1 de la tabla, por lo que lo pediremos por separado
       const urlElemdos = $('table.table');
       const urlTablados = $(urlElemdos).find("tr")[5];
       for (let m = 0; m < 2; m++) {
@@ -89,6 +109,7 @@ function robarDatos(posicion) {
           datosVoluntariado.push(soloFecha);
         }
       };
+      //Por último rascamos la columna dos entera de la tabla, donde están la mayoría de datos que necesitamos
       const urlElem = $('table.table')
       for (let i = 0; i < urlElem.length; i++) {
         const urlTabla = $(urlElem[i]).find("tr");
@@ -101,16 +122,18 @@ function robarDatos(posicion) {
         }
       }
       console.log(datosVoluntariado);
+      console.log(direccionesOng);
       let object = {
         titulo: datosVoluntariado[0],
-        provincia: datosVoluntariado[4],
-        fechaLimite: datosVoluntariado[5],
-        ambito: datosVoluntariado[6],
-        fechaInicio: datosVoluntariado[1],
-        fechaFin: datosVoluntariado[2],
-        descripcion: datosVoluntariado[8],
-        extras: `${datosVoluntariado[9] + datosVoluntariado[11]}`,
-        municipio: datosVoluntariado[14]
+        provincia: datosVoluntariado[5],
+        fechaLimite: datosVoluntariado[6],
+        ambito: datosVoluntariado[7],
+        fechaInicio: datosVoluntariado[2],
+        fechaFin: datosVoluntariado[3],
+        ong: datosVoluntariado[1],
+        descripcion: datosVoluntariado[9],
+        extras: `${datosVoluntariado[10] + datosVoluntariado[12]}`,
+        municipio: datosVoluntariado[15]
       };
       console.log(object)
       ofertas.insertOne(object);
@@ -119,7 +142,7 @@ function robarDatos(posicion) {
       if (posicion <= urls.length) {
         setTimeout(() => robarDatos(posicion), 1000);
       } else {
-        console.log("ya hemos terminado")
+        console.log("ya hemos terminado");
       };
     });
 };
