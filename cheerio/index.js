@@ -13,12 +13,11 @@ MongoClient.connect('mongodb+srv://cocorugo:bbkBoo1camp@cluster0-06yeb.mongodb.n
   } else {
 
     db = res.db('idatis');
-    ofertas = db.collection('actividades');
+    actividades = db.collection('actividades');
   }
 });
 let posicion = 0;
 let urls = [];
-let direccionesOng = [];
 let urlPagina = 'https://www.hacesfalta.org';
 
 
@@ -85,16 +84,16 @@ function robarDatos(posicion) {
       let interior = $(fila).find("td div.clear");
       let ong = $(interior.find("a"))[1];
       if (ong) {
-        const ongText = $(ong).text().trim();
+        let ongText = $(ong).text().trim();
         datosVoluntariado.push(ongText);
       };
       //Necesitamos la dirección de la ficha de cada ONG para obtener una URL  a su web oficial
       
       let interior2 = $(fila).find("td div.clear");
-      let ongUrl = $(interior.find("a"))[1];
+      let ongUrl = $(interior2.find("a"))[1];
       if (ongUrl) {
-        const ongText2 = $(ongUrl).attr('href');
-        direccionesOng.push(ongText2);
+        let ongText2 = $(ongUrl).attr('href');
+        datosVoluntariado.push(ongText2);
       };
       
       //Algo parecido con la fecha inicio, está en la columna 1 de la tabla, por lo que lo pediremos por separado
@@ -122,21 +121,22 @@ function robarDatos(posicion) {
         }
       }
       console.log(datosVoluntariado);
-      console.log(direccionesOng);
       let object = {
         titulo: datosVoluntariado[0],
-        provincia: datosVoluntariado[5],
-        fechaLimite: datosVoluntariado[6],
-        ambito: datosVoluntariado[7],
-        fechaInicio: datosVoluntariado[2],
-        fechaFin: datosVoluntariado[3],
+        provincia: datosVoluntariado[6],
+        fechaLimite: datosVoluntariado[7],
+        ambito: datosVoluntariado[8],
+        fechaInicio: datosVoluntariado[3],
+        fechaFin: datosVoluntariado[4],
         ong: datosVoluntariado[1],
-        descripcion: datosVoluntariado[9],
-        extras: `${datosVoluntariado[10] + datosVoluntariado[12]}`,
-        municipio: datosVoluntariado[15]
+        descripcion: datosVoluntariado[10],
+        extras: `${datosVoluntariado[11] + datosVoluntariado[13]}`,
+        municipio: datosVoluntariado[16],
+        ruta: datosVoluntariado[2]
       };
+      infoExtra(object, object.ruta);
       console.log(object)
-      ofertas.insertOne(object);
+      // actividades.insertOne(object);
 
       posicion++;
       if (posicion <= urls.length) {
@@ -146,3 +146,20 @@ function robarDatos(posicion) {
       };
     });
 };
+
+function infoExtra(objeto, dirONG) {
+  axios.get(`${urlPagina + dirONG}`).then(function(response) {
+    //hago cheerio
+    const $ = cheerio.load(response.data);
+    let container = $('div.ficha-ong dl.datos-ong dd')[2];
+    let objetivo = $(container).find('a');
+    if(objetivo){
+      let pasaraTexto = $(objetivo).attr('href');
+      objeto.webOficial = pasaraTexto;
+      actividades.insertOne(objeto);
+    }
+    //consigo el dato de la url del voluntariado
+    
+    
+  })
+}
