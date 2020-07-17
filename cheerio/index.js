@@ -4,7 +4,7 @@ const mongodb = require('mongodb');
 
 const MongoClient = mongodb.MongoClient;
 let db;
-let ofertas;
+let actividades;
 
 MongoClient.connect('mongodb+srv://cocorugo:bbkBoo1camp@cluster0-06yeb.mongodb.net/idatis?retryWrites=true&w=majority', function (err, res) {
   if (err !== null) {
